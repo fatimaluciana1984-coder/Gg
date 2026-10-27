@@ -1,0 +1,1215 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyberpunk Space Runner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Cyberpunk Style -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #05050d;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .font-cyber {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .cyber-button {
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            transition: transform 0.1s ease, filter 0.1s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .cyber-button:active {
+            transform: scale(0.96);
+            filter: brightness(1.2);
+        }
+        .scrollable-content {
+            touch-action: pan-y !important;
+            -webkit-overflow-scrolling: touch;
+            overflow-y: auto !important;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0e1b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f0ff;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen w-screen relative overflow-hidden bg-black select-none">
+
+    <!-- CANVAS PRINCIPAL DO JOGO -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block z-0 pointer-events-auto"></canvas>
+
+    <!-- OVERLAY UI SUPERIOR (HUD) -->
+    <div id="hudUI" class="absolute top-0 left-0 w-full p-3 sm:p-4 flex justify-between items-start pointer-events-none z-20 hidden">
+        <div id="hudPlayersList" class="flex flex-wrap gap-2 max-w-[70%]">
+            <!-- Injetado dinamicamente -->
+        </div>
+
+        <div class="flex flex-col items-end gap-1">
+            <div class="bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-cyan-500/30 flex items-center gap-2">
+                <i class="fa-solid fa-coins text-yellow-400 text-base"></i>
+                <span id="hudCoins" class="font-cyber text-lg font-bold text-yellow-400">0</span>
+            </div>
+            <div class="bg-black/60 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-purple-500/30">
+                <span class="text-[10px] text-purple-300 font-cyber">DIST: <span id="hudDistance" class="text-cyan-300 font-bold">0m</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÕES DE TIRO RÁPIDO -->
+    <div id="shootBtnContainer" class="absolute bottom-36 sm:bottom-40 left-0 w-full z-30 hidden pointer-events-auto flex flex-wrap justify-center gap-3 px-4">
+        <!-- Injetado via JS -->
+    </div>
+
+    <!-- TELA INICIAL (MAIN MENU) -->
+    <div id="startScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto pointer-events-auto">
+        <div class="max-w-md w-full my-auto flex flex-col items-center text-center space-y-3 bg-slate-900/95 p-4 sm:p-6 rounded-2xl border border-cyan-500/40 shadow-[0_0_50px_rgba(0,240,255,0.2)]">
+            
+            <div>
+                <h1 class="font-cyber text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-300 to-pink-500 tracking-wider">
+                    CYBERPUNK SPACE RUNNER
+                </h1>
+                <p class="text-xs font-cyber tracking-wide text-cyan-300/80 mt-1">
+                    Cooperativo de 1 a 4 Jogadores!
+                </p>
+            </div>
+
+            <!-- Seletor de Modo: 1 a 4 Jogadores -->
+            <div class="w-full bg-slate-950/80 rounded-xl p-2.5 border border-cyan-900/60 text-left space-y-1.5">
+                <label class="block text-xs font-cyber text-cyan-400">
+                    <i class="fa-solid fa-users mr-1"></i> SELECIONAR JOGADORES (1 A 4):
+                </label>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" data-players="1" class="player-count-btn py-2 bg-cyan-500/30 text-cyan-300 border border-cyan-400 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto">1P</button>
+                    <button type="button" data-players="2" class="player-count-btn py-2 bg-slate-800 text-gray-400 border border-gray-700 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto">2P</button>
+                    <button type="button" data-players="3" class="player-count-btn py-2 bg-slate-800 text-gray-400 border border-gray-700 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto">3P</button>
+                    <button type="button" data-players="4" class="player-count-btn py-2 bg-slate-800 text-gray-400 border border-gray-700 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto">4P</button>
+                </div>
+            </div>
+
+            <!-- Dashboard de Estatísticas -->
+            <div class="w-full bg-slate-950/80 rounded-xl p-2.5 border border-cyan-900/50 grid grid-cols-2 gap-2 text-left">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-yellow-400">
+                        <i class="fa-solid fa-coins text-base"></i>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-gray-400 font-cyber">MOEDAS</div>
+                        <div id="savedCoins" class="font-cyber font-bold text-yellow-400 text-sm">0</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/30 text-cyan-400">
+                        <i class="fa-solid fa-trophy text-base"></i>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-gray-400 font-cyber">MELHOR DISTÂNCIA</div>
+                        <div id="savedBestDistance" class="font-cyber font-bold text-cyan-300 text-sm">0m</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões Principais -->
+            <div class="w-full space-y-2">
+                <button type="button" id="btnStartGame" class="cyber-button w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-cyber font-black text-base tracking-wider flex items-center justify-center gap-2 pointer-events-auto">
+                    <i class="fa-solid fa-play"></i> INICIAR MISSÃO
+                </button>
+
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" id="btnOpenShop" class="cyber-button py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 font-cyber font-bold text-[11px] flex items-center justify-center gap-1 pointer-events-auto">
+                        <i class="fa-solid fa-store"></i> LOJA
+                    </button>
+                    <button type="button" id="btnOpenStudio" class="cyber-button py-2 bg-purple-500/20 text-purple-300 border border-purple-500/50 font-cyber font-bold text-[11px] flex items-center justify-center gap-1 pointer-events-auto">
+                        <i class="fa-solid fa-palette"></i> DESENHAR
+                    </button>
+                    <button type="button" id="btnOpenSettings" class="cyber-button py-2 bg-slate-800 text-cyan-300 border border-cyan-500/40 font-cyber font-bold text-[11px] flex items-center justify-center gap-1 pointer-events-auto">
+                        <i class="fa-solid fa-gear"></i> AJUSTES
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LOJA -->
+    <div id="shopModal" class="absolute inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md hidden pointer-events-auto">
+        <div class="max-w-md w-full bg-slate-900 p-4 rounded-2xl border border-yellow-500/50 space-y-3 my-auto max-h-[92vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 shrink-0">
+                <h2 class="font-cyber text-base font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-store"></i> LOJA DE SKINS
+                </h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-lg border border-yellow-500/40 text-xs font-cyber font-bold text-yellow-400">
+                        <i class="fa-solid fa-coins"></i> <span id="shopCoinsDisplay">0</span>
+                    </div>
+                    <button type="button" id="btnCloseShop" class="text-gray-400 hover:text-white text-lg cursor-pointer p-1 pointer-events-auto"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div id="shopGrid" class="scrollable-content grid grid-cols-2 gap-2 grow overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DO ESTÚDIO DE DESENHO LIVRE APRIMORADO -->
+    <div id="studioModal" class="absolute inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md hidden pointer-events-auto">
+        <div class="max-w-md w-full bg-slate-900 p-4 rounded-2xl border border-purple-500/50 space-y-3 my-auto flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 shrink-0">
+                <h2 class="font-cyber text-base font-bold text-purple-400 flex items-center gap-2">
+                    <i class="fa-solid fa-palette"></i> ESTÚDIO DE DESENHO & BALDE DE TINTA
+                </h2>
+                <button type="button" id="btnCloseStudio" class="text-gray-400 hover:text-white text-lg cursor-pointer p-1 pointer-events-auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-[11px] text-gray-300 font-cyber">Desenhe, preencha com o balde de tinta ou escolha formatos rápidos:</p>
+            
+            <div class="flex justify-center bg-slate-950 p-3 rounded-xl border border-gray-800 relative">
+                <canvas id="paintCanvas" width="200" height="200" class="border border-purple-500/40 rounded bg-black cursor-crosshair w-[200px] h-[200px] touch-none"></canvas>
+            </div>
+
+            <!-- Botões de Moldes / Formatos de Nave Rápidos -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <span class="text-[10px] text-purple-300 font-cyber shrink-0">MOLDES:</span>
+                <button type="button" id="moldClassic" class="px-2 py-1 bg-slate-800 text-cyan-300 border border-cyan-500/30 rounded text-[10px] font-cyber cursor-pointer shrink-0 pointer-events-auto">Caça Clássico</button>
+                <button type="button" id="moldInterceptor" class="px-2 py-1 bg-slate-800 text-yellow-300 border border-yellow-500/30 rounded text-[10px] font-cyber cursor-pointer shrink-0 pointer-events-auto">Interceptador</button>
+                <button type="button" id="moldSaucer" class="px-2 py-1 bg-slate-800 text-pink-300 border border-pink-500/30 rounded text-[10px] font-cyber cursor-pointer shrink-0 pointer-events-auto">OVNI / Disco</button>
+            </div>
+
+            <!-- Ferramentas: Lápis, Balde de Tinta, Borracha, Espessura e Cor -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-2.5 rounded-xl border border-gray-800">
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="toolPen" title="Lápis" class="p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto"><i class="fa-solid fa-pencil"></i></button>
+                    <button type="button" id="toolBucket" title="Balde de Tinta" class="p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto"><i class="fa-solid fa-fill-drip"></i></button>
+                    <button type="button" id="toolEraser" title="Borracha" class="p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto"><i class="fa-solid fa-eraser"></i></button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-400 font-cyber">TAM:</span>
+                    <input type="range" id="brushSize" min="2" max="16" value="5" class="w-16 accent-purple-500 cursor-pointer pointer-events-auto">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-400 font-cyber">COR:</span>
+                    <input type="color" id="pickerColor" value="#00f0ff" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded pointer-events-auto">
+                </div>
+            </div>
+
+            <!-- Paleta Rápida + Botão Limpar -->
+            <div class="flex items-center justify-between gap-1">
+                <div class="flex items-center gap-1.5">
+                    <button type="button" data-color="#00f0ff" class="quick-color w-6 h-6 rounded-full bg-[#00f0ff] border-2 border-white cursor-pointer pointer-events-auto"></button>
+                    <button type="button" data-color="#ffe600" class="quick-color w-6 h-6 rounded-full bg-[#ffe600] border-2 border-transparent cursor-pointer pointer-events-auto"></button>
+                    <button type="button" data-color="#ff0055" class="quick-color w-6 h-6 rounded-full bg-[#ff0055] border-2 border-transparent cursor-pointer pointer-events-auto"></button>
+                    <button type="button" data-color="#00ff88" class="quick-color w-6 h-6 rounded-full bg-[#00ff88] border-2 border-transparent cursor-pointer pointer-events-auto"></button>
+                    <button type="button" data-color="#ffffff" class="quick-color w-6 h-6 rounded-full bg-[#ffffff] border-2 border-transparent cursor-pointer pointer-events-auto"></button>
+                </div>
+                <button type="button" id="btnClearDraw" class="px-3 py-1 bg-red-900/40 text-red-300 font-cyber text-xs rounded border border-red-600 cursor-pointer pointer-events-auto">Limpar</button>
+            </div>
+
+            <button type="button" id="btnSaveCustomSkin" class="cyber-button w-full py-2.5 bg-purple-500 text-black font-cyber font-bold text-xs pointer-events-auto">SALVAR E EQUIPAR</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIGURAÇÕES -->
+    <div id="settingsModal" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden pointer-events-auto">
+        <div class="max-w-md w-full bg-slate-900 p-5 rounded-2xl border border-yellow-400/40 space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <h2 class="font-cyber text-lg font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> CONFIGURAÇÕES
+                </h2>
+                <button type="button" id="btnCloseSettings" class="text-gray-400 hover:text-white text-lg cursor-pointer p-1 pointer-events-auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-2.5 bg-slate-950 rounded-lg border border-gray-800">
+                    <span class="text-xs font-cyber text-gray-300">EFEITOS SONOROS (SFX)</span>
+                    <input type="checkbox" id="sfxToggle" checked class="w-4 h-4 accent-cyan-400 cursor-pointer pointer-events-auto">
+                </div>
+            </div>
+            <button type="button" id="btnSaveSettings" class="cyber-button w-full py-2.5 bg-yellow-400 text-black font-cyber font-bold text-xs pointer-events-auto">SALVAR</button>
+        </div>
+    </div>
+
+    <!-- TELA DE FIM DE JOGO -->
+    <div id="gameOverModal" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden pointer-events-auto">
+        <div class="max-w-md w-full bg-slate-900 p-6 rounded-2xl border border-pink-500/50 text-center space-y-5">
+            <div>
+                <i id="endGameIcon" class="fa-solid fa-triangle-exclamation text-4xl text-red-500 animate-bounce"></i>
+                <h2 id="endGameTitle" class="font-cyber text-2xl font-black text-red-500 mt-2">MISSÃO ENCERRADA</h2>
+                <p id="endGameSubtitle" class="text-xs font-cyber text-gray-400 mt-1">Fim da jornada espacial</p>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-gray-800 space-y-2 text-left">
+                <div class="flex justify-between items-center text-xs font-cyber">
+                    <span class="text-gray-400">Distância Alcançada:</span>
+                    <span id="endDistance" class="text-cyan-300 font-bold">0m</span>
+                </div>
+                <div class="flex justify-between items-center text-xs font-cyber">
+                    <span class="text-gray-400">Moedas Coletadas:</span>
+                    <span id="endCoins" class="text-yellow-400 font-bold">+0</span>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button type="button" id="btnRestartGame" class="cyber-button w-full py-2.5 bg-cyan-400 text-black font-cyber font-black text-sm pointer-events-auto">
+                    <i class="fa-solid fa-rotate-right"></i> JOGAR NOVAMENTE
+                </button>
+                <button type="button" id="btnReturnMenu" class="cyber-button w-full py-2 bg-slate-800 text-gray-300 font-cyber font-bold text-xs pointer-events-auto">
+                    MENU PRINCIPAL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DO JOGO E DA INTERFACE -->
+    <script>
+        // Sistema de Áudio Sintetizado via Web Audio API
+        const sound = {
+            ctx: null,
+            enabled: true,
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playShoot() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch(e) {}
+            },
+            playHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.15);
+                } catch(e) {}
+            },
+            playCoin() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(1300, this.ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                } catch(e) {}
+            },
+            speak(text) {
+                if (!this.enabled) return;
+                if ('speechSynthesis' in window) {
+                    try {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'pt-BR';
+                        utterance.rate = 1.1;
+                        window.speechSynthesis.speak(utterance);
+                    } catch(e) {}
+                }
+            }
+        };
+
+        const SHOP_SKINS = [
+            { id: 'skin_default', name: 'Caça Padrão', price: 0, color: '#00f0ff' },
+            { id: 'skin_gold', name: 'Interceptor Dourado', price: 100, color: '#ffe600' },
+            { id: 'skin_neon', name: 'Vingador Neon', price: 250, color: '#ff0055' },
+            { id: 'skin_matrix', name: 'Cyber Matrix', price: 400, color: '#00ff88' }
+        ];
+
+        window.userProgress = {
+            coins: 50,
+            bestDistance: 0,
+            equippedSkin: 'skin_default',
+            ownedSkins: ['skin_default'],
+            customDrawingData: null,
+            sfx: true
+        };
+
+        let chosenPlayerCount = 1;
+
+        // Função auxiliar segura para ligar eventos de clique e toque
+        function bindClick(id, fn) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', fn);
+                el.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    fn();
+                });
+            }
+        }
+
+        // Estúdio de Desenho Aprimorado com Balde de Tinta e Moldes
+        const paintCanvas = document.getElementById('paintCanvas');
+        const pCtx = paintCanvas.getContext('2d', { alpha: false });
+        let isDrawing = false;
+        let currentDrawColor = '#00f0ff';
+        let currentTool = 'pen'; // 'pen', 'bucket', 'eraser'
+        let currentBrushSize = 5;
+
+        pCtx.fillStyle = '#000000';
+        pCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.replace('#',''), 16);
+            return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+        }
+
+        function floodFill(startX, startY, fillColorHex) {
+            const imgData = pCtx.getImageData(0, 0, paintCanvas.width, paintCanvas.height);
+            const data = imgData.data;
+            const targetX = Math.floor(startX);
+            const targetY = Math.floor(startY);
+            
+            if (targetX < 0 || targetX >= paintCanvas.width || targetY < 0 || targetY >= paintCanvas.height) return;
+
+            const startIndex = (targetY * paintCanvas.width + targetX) * 4;
+            const startR = data[startIndex];
+            const startG = data[startIndex + 1];
+            const startB = data[startIndex + 2];
+
+            const [fillR, fillG, fillB] = hexToRgb(fillColorHex);
+
+            if (startR === fillR && startG === fillG && startB === fillB) return;
+
+            const queue = [[targetX, targetY]];
+            const width = paintCanvas.width;
+            const height = paintCanvas.height;
+
+            while (queue.length > 0) {
+                const [x, y] = queue.pop();
+                let currentIdx = (y * width + x) * 4;
+
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                if (data[currentIdx] !== startR || data[currentIdx+1] !== startG || data[currentIdx+2] !== startB) continue;
+
+                data[currentIdx] = fillR;
+                data[currentIdx+1] = fillG;
+                data[currentIdx+2] = fillB;
+
+                queue.push([x + 1, y]);
+                queue.push([x - 1, y]);
+                queue.push([x, y + 1]);
+                queue.push([x, y - 1]);
+            }
+
+            pCtx.putImageData(imgData, 0, 0);
+        }
+
+        function startDrawing(e) {
+            const rect = paintCanvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            if (currentTool === 'bucket') {
+                floodFill(x, y, currentDrawColor);
+                return;
+            }
+
+            isDrawing = true;
+            pCtx.beginPath();
+            pCtx.moveTo(x, y);
+        }
+
+        function drawFree(e) {
+            if (!isDrawing || currentTool === 'bucket') return;
+            const rect = paintCanvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            pCtx.lineWidth = currentBrushSize;
+            pCtx.lineCap = 'round';
+            pCtx.lineJoin = 'round';
+            
+            if (currentTool === 'eraser') {
+                pCtx.strokeStyle = '#000000';
+            } else {
+                pCtx.strokeStyle = currentDrawColor;
+            }
+
+            pCtx.lineTo(clientX - rect.left, clientY - rect.top);
+            pCtx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        paintCanvas.addEventListener('pointerdown', startDrawing);
+        paintCanvas.addEventListener('pointermove', drawFree);
+        paintCanvas.addEventListener('pointerup', stopDrawing);
+        paintCanvas.addEventListener('pointerout', stopDrawing);
+
+        function drawMoldClassic() {
+            pCtx.fillStyle = '#000000';
+            pCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+            pCtx.strokeStyle = '#00f0ff';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            pCtx.moveTo(100, 30);
+            pCtx.lineTo(150, 160);
+            pCtx.lineTo(100, 130);
+            pCtx.lineTo(50, 160);
+            pCtx.closePath();
+            pCtx.stroke();
+        }
+
+        function drawMoldInterceptor() {
+            pCtx.fillStyle = '#000000';
+            pCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+            pCtx.strokeStyle = '#ffe600';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            pCtx.moveTo(100, 20);
+            pCtx.lineTo(170, 140);
+            pCtx.lineTo(100, 110);
+            pCtx.lineTo(30, 140);
+            pCtx.closePath();
+            pCtx.stroke();
+        }
+
+        function drawMoldSaucer() {
+            pCtx.fillStyle = '#000000';
+            pCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+            pCtx.strokeStyle = '#ff0055';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            pCtx.ellipse(100, 100, 60, 25, 0, 0, Math.PI * 2);
+            pCtx.stroke();
+        }
+
+        function loadSavedData() {
+            try {
+                const data = localStorage.getItem('cyber_runner_save_clean_v5');
+                if (data) Object.assign(window.userProgress, JSON.parse(data));
+                if (window.userProgress.customDrawingData) {
+                    const img = new Image();
+                    img.onload = () => { pCtx.drawImage(img, 0, 0); };
+                    img.src = window.userProgress.customDrawingData;
+                }
+            } catch(e) {}
+            updateUI();
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('cyber_runner_save_clean_v5', JSON.stringify(window.userProgress));
+            } catch(e) {}
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('savedCoins').textContent = window.userProgress.coins;
+            document.getElementById('shopCoinsDisplay').textContent = window.userProgress.coins;
+            document.getElementById('savedBestDistance').textContent = window.userProgress.bestDistance + 'm';
+            document.getElementById('sfxToggle').checked = window.userProgress.sfx;
+            sound.enabled = window.userProgress.sfx;
+            renderShop();
+        }
+
+        function renderShop() {
+            const grid = document.getElementById('shopGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            const skinsToDisplay = [...SHOP_SKINS];
+            if (window.userProgress.ownedSkins.includes('custom_skin')) {
+                skinsToDisplay.push({ id: 'custom_skin', name: 'Nave Customizada', price: 0, color: '#a855f7' });
+            }
+
+            skinsToDisplay.forEach(skin => {
+                const isOwned = window.userProgress.ownedSkins.includes(skin.id);
+                const isEquipped = window.userProgress.equippedSkin === skin.id;
+                const card = document.createElement('div');
+                card.className = `bg-slate-950 p-2.5 rounded-xl border ${isEquipped ? 'border-yellow-400 bg-yellow-950/20' : 'border-gray-800'} flex flex-col items-center justify-between text-center gap-2`;
+
+                let btnHTML = isEquipped ? 
+                    `<button class="w-full py-1.5 bg-yellow-400 text-black font-cyber text-[10px] font-bold rounded">EQUIPADO</button>` :
+                    (isOwned ? `<button class="btn-eq w-full py-1.5 bg-slate-800 text-yellow-300 border border-yellow-500/40 font-cyber text-[10px] font-bold rounded cursor-pointer pointer-events-auto">EQUIPAR</button>` :
+                    `<button class="btn-buy w-full py-1.5 bg-yellow-500 text-black font-cyber text-[10px] font-bold rounded cursor-pointer pointer-events-auto">${skin.price} 🪙</button>`);
+
+                card.innerHTML = `
+                    <div class="w-10 h-10 flex items-center justify-center">
+                        <svg viewBox="0 0 40 40" class="w-8 h-8">
+                            <polygon points="20,5 35,35 20,28 5,35" fill="#0a0d1a" stroke="${skin.color}" stroke-width="2.5" />
+                        </svg>
+                    </div>
+                    <div class="font-cyber text-xs font-bold text-gray-200">${skin.name}</div>
+                    ${btnHTML}
+                `;
+
+                const eqBtn = card.querySelector('.btn-eq');
+                if (eqBtn) {
+                    eqBtn.addEventListener('click', () => { window.userProgress.equippedSkin = skin.id; saveData(); });
+                    eqBtn.addEventListener('touchend', (e) => { e.preventDefault(); window.userProgress.equippedSkin = skin.id; saveData(); });
+                }
+                const buyBtn = card.querySelector('.btn-buy');
+                if (buyBtn) {
+                    buyBtn.addEventListener('click', () => {
+                        if (window.userProgress.coins >= skin.price) {
+                            window.userProgress.coins -= skin.price;
+                            window.userProgress.ownedSkins.push(skin.id);
+                            window.userProgress.equippedSkin = skin.id;
+                            saveData();
+                        }
+                    });
+                    buyBtn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        if (window.userProgress.coins >= skin.price) {
+                            window.userProgress.coins -= skin.price;
+                            window.userProgress.ownedSkins.push(skin.id);
+                            window.userProgress.equippedSkin = skin.id;
+                            saveData();
+                        }
+                    });
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        // MOTOR DO JOGO OTIMIZADO
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let isRunning = false;
+        let distance = 0;
+        let targetDist = 300;
+        let score = 0;
+        let coinsCollected = 0;
+        let bossFight = false;
+        let finalBoss = null;
+
+        let players = [];
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        let stars = [], obstacles = [], coins = [], bullets = [], enemyBullets = [], particles = [];
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 25; i++) {
+                stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 1.5 + 0.8, speed: Math.random() * 1.5 + 0.8 });
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 5; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, radius: Math.random()*2+1, color, life: 1 });
+            }
+        }
+
+        function shootBullet(p) {
+            if (!isRunning || p.hp <= 0) return;
+            bullets.push({ x: p.x, y: p.y - p.radius, speedY: -12, playerIdx: p.id });
+            sound.playShoot();
+        }
+
+        function setupPlayersCount(count) {
+            chosenPlayerCount = count;
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                const num = parseInt(btn.getAttribute('data-players'));
+                if (num === count) {
+                    btn.className = "player-count-btn py-2 bg-cyan-500/30 text-cyan-300 border border-cyan-400 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto";
+                } else {
+                    btn.className = "player-count-btn py-2 bg-slate-800 text-gray-400 border border-gray-700 rounded-lg font-cyber text-xs font-bold cursor-pointer pointer-events-auto";
+                }
+            });
+        }
+
+        function initGameSession() {
+            sound.init();
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('hudUI').classList.remove('hidden');
+
+            players = [];
+            const activeSkin = SHOP_SKINS.find(s => s.id === window.userProgress.equippedSkin) || SHOP_SKINS[0];
+            const skinColor = window.userProgress.equippedSkin === 'custom_skin' ? '#a855f7' : activeSkin.color;
+            const colors = [skinColor, '#ffe600', '#ff0055', '#00ff88'];
+
+            for (let i = 0; i < chosenPlayerCount; i++) {
+                const startX = canvas.width * ((i + 1) / (chosenPlayerCount + 1));
+                players.push({
+                    id: i,
+                    name: `P${i+1}`,
+                    x: startX,
+                    y: canvas.height * 0.75,
+                    targetX: startX,
+                    targetY: canvas.height * 0.75,
+                    radius: 18,
+                    hp: 30,
+                    maxHp: 30,
+                    color: colors[i % colors.length]
+                });
+            }
+
+            const hudList = document.getElementById('hudPlayersList');
+            hudList.innerHTML = '';
+            players.forEach(p => {
+                const row = document.createElement('div');
+                row.id = `hudRow_${p.id}`;
+                row.className = 'flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2 py-1 rounded-lg border border-cyan-500/30';
+                row.innerHTML = `
+                    <span class="font-cyber text-[10px] font-bold" style="color: ${p.color}">P${p.id+1}</span>
+                    <div class="w-16 bg-gray-900 h-2.5 rounded-full overflow-hidden border border-gray-700">
+                        <div id="hpBar_${p.id}" class="h-full w-full transition-all duration-200" style="background: ${p.color}"></div>
+                    </div>
+                `;
+                hudList.appendChild(row);
+            });
+
+            const shootContainer = document.getElementById('shootBtnContainer');
+            shootContainer.innerHTML = '';
+            shootContainer.classList.remove('hidden');
+
+            players.forEach(p => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cyber-button px-4 py-2.5 rounded-xl text-black font-cyber text-xs font-black shadow-lg flex items-center gap-1 pointer-events-auto';
+                btn.style.backgroundColor = p.color;
+                btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i> P${p.id+1} ATIRAR`;
+                btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); shootBullet(p); });
+                btn.addEventListener('touchend', (e) => { e.stopPropagation(); e.preventDefault(); shootBullet(p); });
+                shootContainer.appendChild(btn);
+            });
+
+            isRunning = true;
+            distance = 0;
+            score = 0;
+            coinsCollected = 0;
+            bossFight = false;
+            finalBoss = null;
+            obstacles = []; coins = []; bullets = []; enemyBullets = []; particles = [];
+            initStars();
+            sound.speak("Missão iniciada!");
+        }
+
+        function update() {
+            if (!isRunning) return;
+
+            if (!bossFight) {
+                distance += 0.08;
+                document.getElementById('hudDistance').textContent = Math.floor(distance) + 'm / ' + targetDist + 'm';
+            }
+            document.getElementById('hudCoins').textContent = coinsCollected;
+
+            players.forEach(p => {
+                const bar = document.getElementById(`hpBar_${p.id}`);
+                if (bar) bar.style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
+                if (p.hp <= 0) {
+                    const hudRow = document.getElementById(`hudRow_${p.id}`);
+                    if (hudRow) hudRow.style.opacity = '0.3';
+                }
+            });
+
+            if (!bossFight && distance >= targetDist) {
+                bossFight = true;
+                finalBoss = {
+                    x: canvas.width / 2,
+                    y: 120,
+                    width: 120,
+                    height: 60,
+                    hp: 150,
+                    maxHp: 150,
+                    vx: 3,
+                    attackTimer: 0
+                };
+                sound.speak("Alerta! O Chefão final apareceu!");
+                const hudList = document.getElementById('hudPlayersList');
+                if (!document.getElementById('bossHudRow')) {
+                    const bossRow = document.createElement('div');
+                    bossRow.id = 'bossHudRow';
+                    bossRow.className = 'flex items-center gap-1.5 bg-red-950/90 backdrop-blur-md px-3 py-1 rounded-lg border border-red-500/60 mt-1 shadow-[0_0_15px_rgba(255,0,85,0.4)]';
+                    bossRow.innerHTML = `
+                        <span class="font-cyber text-[10px] font-bold text-red-400">CHEFÃO</span>
+                        <div class="w-28 bg-gray-900 h-2.5 rounded-full overflow-hidden border border-red-700">
+                            <div id="bossHpBar" class="h-full w-full bg-red-500 transition-all duration-200"></div>
+                        </div>
+                    `;
+                    hudList.appendChild(bossRow);
+                }
+            }
+
+            if (bossFight && finalBoss) {
+                finalBoss.x += finalBoss.vx;
+                if (finalBoss.x < 70 || finalBoss.x > canvas.width - 70) {
+                    finalBoss.vx *= -1;
+                }
+                finalBoss.attackTimer++;
+                if (finalBoss.attackTimer >= 35) {
+                    finalBoss.attackTimer = 0;
+                    enemyBullets.push({ x: finalBoss.x - 35, y: finalBoss.y + 30, speedY: 5 });
+                    enemyBullets.push({ x: finalBoss.x, y: finalBoss.y + 35, speedY: 6 });
+                    enemyBullets.push({ x: finalBoss.x + 35, y: finalBoss.y + 30, speedY: 5 });
+                    sound.playShoot();
+                }
+
+                players.forEach(p => {
+                    if (p.hp > 0 && Math.hypot(p.x - finalBoss.x, p.y - finalBoss.y) < p.radius + 40) {
+                        p.hp -= 2;
+                        sound.playHit();
+                    }
+                });
+
+                const bossBar = document.getElementById('bossHpBar');
+                if (bossBar) bossBar.style.width = Math.max(0, (finalBoss.hp / finalBoss.maxHp) * 100) + '%';
+            }
+
+            const kSpeed = 7;
+            if (players[0] && players[0].hp > 0) {
+                if (keys['w']) players[0].targetY -= kSpeed;
+                if (keys['s']) players[0].targetY += kSpeed;
+                if (keys['a']) players[0].targetX -= kSpeed;
+                if (keys['d']) players[0].targetX += kSpeed;
+                if (keys[' ']) { shootBullet(players[0]); keys[' '] = false; }
+            }
+
+            if (players[1] && players[1].hp > 0) {
+                if (keys['arrowup']) players[1].targetY -= kSpeed;
+                if (keys['arrowdown']) players[1].targetY += kSpeed;
+                if (keys['arrowleft']) players[1].targetX -= kSpeed;
+                if (keys['arrowright']) players[1].targetX += kSpeed;
+                if (keys['enter']) { shootBullet(players[1]); keys['enter'] = false; }
+            }
+
+            players.forEach(p => {
+                if (p.hp <= 0) return;
+                p.targetX = Math.max(p.radius, Math.min(canvas.width - p.radius, p.targetX));
+                p.targetY = Math.max(p.radius, Math.min(canvas.height - p.radius, p.targetY));
+                p.x += (p.targetX - p.x) * 0.3;
+                p.y += (p.targetY - p.y) * 0.3;
+            });
+
+            stars.forEach(s => {
+                s.y += s.speed;
+                if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+            });
+
+            if (Math.random() < 0.02) {
+                obstacles.push({
+                    x: Math.random() * (canvas.width - 50) + 25,
+                    y: -30,
+                    radius: Math.random() * 10 + 14,
+                    speedY: Math.random() * 1.5 + 2.5
+                });
+            }
+
+            if (Math.random() < 0.02) {
+                coins.push({
+                    x: Math.random() * (canvas.width - 40) + 20,
+                    y: -20,
+                    radius: 10,
+                    speedY: 2.5
+                });
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += obs.speedY;
+                let removed = false;
+                players.forEach(p => {
+                    if (!removed && p.hp > 0 && Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius) {
+                        p.hp -= 10;
+                        sound.playHit();
+                        createExplosion(obs.x, obs.y, '#ff0055');
+                        obstacles.splice(i, 1);
+                        removed = true;
+                    }
+                });
+                if (!removed && obs.y > canvas.height + 40) obstacles.splice(i, 1);
+            }
+
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const c = coins[i];
+                c.y += c.speedY;
+                let collected = false;
+                players.forEach(p => {
+                    if (!collected && p.hp > 0 && Math.hypot(p.x - c.x, p.y - c.y) < p.radius + c.radius) {
+                        coinsCollected++;
+                        score += 50;
+                        sound.playCoin();
+                        coins.splice(i, 1);
+                        collected = true;
+                    }
+                });
+                if (!collected && c.y > canvas.height + 30) coins.splice(i, 1);
+            }
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.y += b.speedY;
+                let hit = false;
+                
+                if (bossFight && finalBoss) {
+                    if (Math.abs(b.x - finalBoss.x) < finalBoss.width / 2 && Math.abs(b.y - finalBoss.y) < finalBoss.height / 2) {
+                        finalBoss.hp -= 10;
+                        createExplosion(b.x, b.y, '#ff0055');
+                        bullets.splice(i, 1);
+                        hit = true;
+                        if (finalBoss.hp <= 0) {
+                            endGame(true);
+                        }
+                    }
+                }
+
+                if (!hit) {
+                    for (let oIdx = obstacles.length - 1; oIdx >= 0; oIdx--) {
+                        const obs = obstacles[oIdx];
+                        if (!hit && Math.hypot(b.x - obs.x, b.y - obs.y) < obs.radius + 5) {
+                            createExplosion(obs.x, obs.y, '#00f0ff');
+                            obstacles.splice(oIdx, 1);
+                            bullets.splice(i, 1);
+                            score += 20;
+                            hit = true;
+                        }
+                    }
+                }
+                if (!hit && b.y < -10) bullets.splice(i, 1);
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const eb = enemyBullets[i];
+                eb.y += eb.speedY;
+                let removed = false;
+                players.forEach(p => {
+                    if (!removed && p.hp > 0 && Math.hypot(p.x - eb.x, p.y - eb.y) < p.radius + 6) {
+                        p.hp -= 15;
+                        sound.playHit();
+                        createExplosion(eb.x, eb.y, '#ff0055');
+                        enemyBullets.splice(i, 1);
+                        removed = true;
+                    }
+                });
+                if (!removed && eb.y > canvas.height + 20) enemyBullets.splice(i, 1);
+            }
+
+            const allDead = players.every(p => p.hp <= 0);
+            if (allDead) endGame(false);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.08;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawShip(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (window.userProgress.equippedSkin === 'custom_skin' && window.userProgress.customDrawingData) {
+                const img = new Image();
+                img.src = window.userProgress.customDrawingData;
+                ctx.drawImage(img, -20, -20, 40, 40);
+            } else {
+                ctx.fillStyle = '#0a0d1a';
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -p.radius - 4);
+                ctx.lineTo(p.radius, p.radius);
+                ctx.lineTo(0, p.radius - 4);
+                ctx.lineTo(-p.radius, p.radius);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-4, -2, 2, 2);
+                ctx.fillRect(2, -2, 2, 2);
+            }
+
+            ctx.fillStyle = p.color;
+            ctx.font = 'bold 10px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.fillText(`P${p.id+1}`, 0, p.radius + 14);
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#05050d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(s => {
+                ctx.fillStyle = '#00f0ff';
+                ctx.fillRect(s.x, s.y, s.size, s.size);
+            });
+
+            if (bossFight && finalBoss) {
+                ctx.save();
+                ctx.translate(finalBoss.x, finalBoss.y);
+                ctx.fillStyle = '#1c030a';
+                ctx.strokeStyle = '#ff0055';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, -finalBoss.height / 2);
+                ctx.lineTo(finalBoss.width / 2, finalBoss.height / 2);
+                ctx.lineTo(-finalBoss.width / 2, finalBoss.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ff0055';
+                ctx.fillRect(-10, -5, 20, 10);
+                ctx.restore();
+            }
+
+            ctx.fillStyle = '#00f0ff';
+            bullets.forEach(b => {
+                ctx.fillRect(b.x - 2, b.y - 4, 4, 8);
+            });
+
+            ctx.fillStyle = '#ff0055';
+            enemyBullets.forEach(eb => {
+                ctx.beginPath();
+                ctx.arc(eb.x, eb.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#ffe600';
+            coins.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#1c030a';
+                ctx.strokeStyle = '#ff0055';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.radius * 2, p.radius * 2);
+                ctx.restore();
+            });
+
+            players.forEach(p => {
+                if (p.hp > 0) {
+                    drawShip(p);
+                } else {
+                    ctx.save();
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = '#ff0055';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('pointermove', e => {
+            if (!isRunning) return;
+            const x = e.clientX, y = e.clientY;
+            const alivePlayers = players.filter(p => p.hp > 0);
+            if (alivePlayers.length === 0) return;
+            
+            let closest = alivePlayers[0];
+            let minDst = Math.hypot(closest.x - x, closest.y - y);
+            for (let i = 1; i < alivePlayers.length; i++) {
+                const dst = Math.hypot(alivePlayers[i].x - x, alivePlayers[i].y - y);
+                if (dst < minDst) {
+                    minDst = dst;
+                    closest = alivePlayers[i];
+                }
+            }
+            closest.targetX = x;
+            closest.targetY = y;
+        });
+
+        function endGame(victory) {
+            isRunning = false;
+            document.getElementById('hudUI').classList.add('hidden');
+            document.getElementById('shootBtnContainer').classList.add('hidden');
+            const bossHud = document.getElementById('bossHudRow');
+            if (bossHud) bossHud.remove();
+
+            window.userProgress.coins += coinsCollected;
+            if (Math.floor(distance) > window.userProgress.bestDistance) {
+                window.userProgress.bestDistance = Math.floor(distance);
+            }
+            saveData();
+
+            const modal = document.getElementById('gameOverModal');
+            document.getElementById('endGameTitle').textContent = victory ? "MISSÃO CONCLUÍDA!" : "NAVES DESTRUÍDAS";
+            document.getElementById('endDistance').textContent = Math.floor(distance) + 'm';
+            document.getElementById('endCoins').textContent = '+' + coinsCollected;
+            modal.classList.remove('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedData();
+            initStars();
+            loop();
+
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                const setPCount = (e) => {
+                    const count = parseInt(btn.getAttribute('data-players'));
+                    setupPlayersCount(count);
+                };
+                btn.addEventListener('click', setPCount);
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); setPCount(); });
+            });
+
+            bindClick('btnStartGame', () => initGameSession());
+            bindClick('btnRestartGame', () => initGameSession());
+            bindClick('btnReturnMenu', () => {
+                document.getElementById('gameOverModal').classList.add('hidden');
+                document.getElementById('startScreen').classList.remove('hidden');
+            });
+
+            bindClick('btnOpenShop', () => document.getElementById('shopModal').classList.remove('hidden'));
+            bindClick('btnCloseShop', () => document.getElementById('shopModal').classList.add('hidden'));
+
+            bindClick('btnOpenStudio', () => document.getElementById('studioModal').classList.remove('hidden'));
+            bindClick('btnCloseStudio', () => document.getElementById('studioModal').classList.add('hidden'));
+
+            const toolPen = document.getElementById('toolPen');
+            const toolBucket = document.getElementById('toolBucket');
+            const toolEraser = document.getElementById('toolEraser');
+            const brushSizeInput = document.getElementById('brushSize');
+            const pickerColorInput = document.getElementById('pickerColor');
+
+            toolPen.addEventListener('click', () => {
+                currentTool = 'pen';
+                toolPen.className = "p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto";
+                toolBucket.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+                toolEraser.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+            });
+
+            toolBucket.addEventListener('click', () => {
+                currentTool = 'bucket';
+                toolBucket.className = "p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto";
+                toolPen.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+                toolEraser.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+            });
+
+            toolEraser.addEventListener('click', () => {
+                currentTool = 'eraser';
+                toolEraser.className = "p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto";
+                toolPen.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+                toolBucket.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+            });
+
+            bindClick('moldClassic', drawMoldClassic);
+            bindClick('moldInterceptor', drawMoldInterceptor);
+            bindClick('moldSaucer', drawMoldSaucer);
+
+            brushSizeInput.addEventListener('input', (e) => {
+                currentBrushSize = parseInt(e.target.value);
+            });
+
+            pickerColorInput.addEventListener('input', (e) => {
+                currentDrawColor = e.target.value;
+                currentTool = 'pen';
+                toolPen.className = "p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto";
+                toolEraser.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+            });
+
+            document.querySelectorAll('.quick-color').forEach(btn => {
+                const selectColor = () => {
+                    currentDrawColor = btn.getAttribute('data-color');
+                    pickerColorInput.value = currentDrawColor;
+                    currentTool = 'pen';
+                    toolPen.className = "p-2 rounded bg-purple-600 text-white cursor-pointer text-xs pointer-events-auto";
+                    toolEraser.className = "p-2 rounded bg-slate-800 text-gray-300 cursor-pointer text-xs pointer-events-auto";
+                };
+                btn.addEventListener('click', selectColor);
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); selectColor(); });
+            });
+
+            bindClick('btnClearDraw', () => {
+                pCtx.fillStyle = '#000000';
+                pCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+            });
+
+            bindClick('btnSaveCustomSkin', () => {
+                window.userProgress.customDrawingData = paintCanvas.toDataURL();
+                if (!window.userProgress.ownedSkins.includes('custom_skin')) {
+                    window.userProgress.ownedSkins.push('custom_skin');
+                }
+                window.userProgress.equippedSkin = 'custom_skin';
+                saveData();
+                document.getElementById('studioModal').classList.add('hidden');
+            });
+
+            bindClick('btnOpenSettings', () => document.getElementById('settingsModal').classList.remove('hidden'));
+            bindClick('btnCloseSettings', () => document.getElementById('settingsModal').classList.add('hidden'));
+
+            bindClick('btnSaveSettings', () => {
+                window.userProgress.sfx = document.getElementById('sfxToggle').checked;
+                saveData();
+                document.getElementById('settingsModal').classList.add('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
+```
